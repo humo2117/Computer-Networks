@@ -1,165 +1,170 @@
-#include <iostream>
-#include <cstdlib>
-#include <climits>
-#include <iomanip>
-
-#ifdef __linux__
-#define CLRSCR "clear"
-#else
-#define CLRSCR "cls"
-#endif
+#include <bits/stdc++.h>
+#define MAX_NODES 10
 
 using namespace std;
 
-class node
+class Graph
 {
-    int totalNodes;
-    int numOfNeighbours;
-    int nodeId;
-    int *delayTable;
-    int **routingTable;
-    node **neighbouringNodes;
-    int *neighbouringNodeDistance;
+public:
+  int edges;
+  int vertices;
+  int nextHop[MAX_NODES][MAX_NODES];
+  int distances[MAX_NODES][MAX_NODES];
+  int adjMatrix[MAX_NODES][MAX_NODES];
 
-  public:
-    node(char nodeId, int totalNodes)
+  void input(int v, int e)
+  {
+    edges = e;
+    vertices = v;
+
+    // initialize the adjacency matrix
+    for (int i = 0; i < v; i++)
+      for (int j = 0; j < v; j++)
+        adjMatrix[i][j] = 0;
+
+    int src, dest, weight;
+
+    // populate the adjacency matrix
+    for (int i = 0; i < edges; i++)
     {
-        this->nodeId = nodeId - 'A';
-        this->totalNodes = totalNodes;
-        this->delayTable = NULL;
-        this->routingTable = NULL;
-        this->neighbouringNodes = new node *[totalNodes];
-        this->neighbouringNodeDistance = new int[totalNodes];
-        this->numOfNeighbours = 0;
+      cout << "\nEDGE " << (i + 1)
+           << "\n======\n";
+      cout << "Enter Source: ";
+      cin >> src;
+      cout << "Enter Destination: ";
+      cin >> dest;
+      cout << "Enter Weight: ";
+      cin >> weight;
+      adjMatrix[src - 1][dest - 1] = weight;
+      adjMatrix[dest - 1][src - 1] = weight;
     }
-    ~node()
+  }
+
+  void display()
+  {
+    for (int i = 0; i < vertices; i++)
     {
-        if (delayTable != NULL)
-            delete[] delayTable;
-        if (routingTable != NULL)
-        {
-            for (int i = 0; i < totalNodes; i++)
-                delete[] routingTable[i];
-            delete[] routingTable;
-        }
-        if (neighbouringNodes != NULL)
-            delete[] neighbouringNodes;
+      for (int j = 0; j < vertices; j++)
+        cout << setw(5) << adjMatrix[i][j] << " ";
+      cout << endl;
     }
-    void addNeighbour(node *nodeArg, int distanceToNode)
+  }
+
+  void distanceVector()
+  {
+    // populate additional data structures
+    for (int i = 0; i < vertices; i++)
+      for (int j = 0; j < vertices; j++)
+      {
+        if (i == j)
+          distances[i][j] = 0;
+        else if (adjMatrix[i][j] == 0)
+          distances[i][j] = INT_MAX / 2;
+        else
+          distances[i][j] = adjMatrix[i][j];
+        nextHop[i][j] = -1;
+      }
+
+    cout << "Initial Distance Matrix\n";
+    cout << "======================\n";
+    for (int i = 0; i < vertices; i++)
     {
-        this->neighbouringNodes[numOfNeighbours] = nodeArg;
-        this->neighbouringNodeDistance[numOfNeighbours] = distanceToNode;
-        numOfNeighbours++;
+      for (int j = 0; j < vertices; j++)
+        if (distances[i][j] == INT_MAX / 2)
+          cout << setw(5) << right << "INF"
+               << " ";
+        else
+          cout << setw(5) << distances[i][j] << " ";
+      cout << endl;
     }
-    void inputDelayTable()
+
+    // iterate if a more efficient route exists
+    bool flag;
+    do
     {
-        delayTable = new int[totalNodes];
-        cout << "Enter delay table of node " << char(nodeId + 'A') << endl;
-        for (int i = 0; i < totalNodes; i++)
-        {
-            cout << char(i + 'A') << " : ";
-            cin >> delayTable[i];
-        }
-    }
-    void displayDelayTable()
-    {
-        cout << "Delay table of " << char(nodeId + 'A') << endl;
-        for (int i = 0; i < totalNodes; i++)
-            cout << char(i + 'A') << " : " << delayTable[i] << endl;
-    }
-    void calculateRoutingTable()
-    {
-        cout << "DEBUG: " << numOfNeighbours << endl;
-        routingTable = new int *[totalNodes];
-        for (int i = 0; i < totalNodes; i++)
-            routingTable[i] = new int[2];
-        for (int i = 0; i < totalNodes; i++)
-        {
-            int min = INT_MAX, delayNode;
-            for (int j = 0; j < numOfNeighbours; j++)
+      // assume a shorter route does not exist
+      flag = false;
+      // iterate over routers considering them to be src
+      for (int i = 0; i < vertices; i++)
+        // iterate over all neighbours
+        for (int j = 0; j < vertices; j++)
+          // iterate over possible destination routers
+          for (int k = 0; k < vertices; k++)
+            // check if the cost of sending packet to kth router
+            // is less than the current cost
+            if (distances[i][j] > (distances[i][k] + distances[k][j]))
             {
-                if (i == this->getNodeId())
-                {
-                    min = 0;
-                    delayNode = '-' - 'A';
-                }
-                else
-                {
-                    if (min > neighbouringNodeDistance[j] + neighbouringNodes[j]->getDelayTo(i))
-                    {
-                        min = neighbouringNodeDistance[j] + neighbouringNodes[j]->getDelayTo(i);
-                        delayNode = neighbouringNodes[j]->getNodeId();
-                    }
-                }
+              // update the cost i.e. distance
+              distances[i][j] = distances[j][i] =
+                  distances[i][k] + distances[k][j];
+              // update router for the next hop
+              nextHop[i][j] = nextHop[j][i] = k;
+              // declare that a shorter route was found
+              flag = true;
             }
-            routingTable[i][0] = min;
-            routingTable[i][1] = delayNode;
-        }
-    }
-    void displayRoutingTable()
+    } while (flag);
+
+    cout << "\nFinal Distance Matrix\n";
+    cout << "======================\n";
+    for (int i = 0; i < vertices; i++)
     {
-        cout << "Routing table of " << char(this->getNodeId() + 'A') << endl
-             << endl;
-        for (int i = 0; i < 28; i++)
-            cout << "-";
-        cout << endl;
-        cout << setw(1) << "|" << setw(8) << setfill(' ') << right << "node" << setw(1) << "|" << setw(8) << setfill(' ') << right
-             << "delay" << setw(1) << "|" << setw(8) << setfill(' ') << right << "via" << setw(1) << "|" << endl;
-        for (int i = 0; i < 28; i++)
-            cout << "-";
-        cout << endl;
-        for (int i = 0; i < totalNodes; i++)
-        {
-            cout << setw(1) << "|" << setw(8) << setfill(' ') << right << char(i + 'A') << setw(1) << "|" << setw(8) << setfill(' ')
-                 << right << routingTable[i][0] << setw(1) << "|" << setw(8) << setfill(' ') << right << char(routingTable[i][1] + 'A')
-                 << setw(1) << "|" << endl;
-        }
-        for (int i = 0; i < 28; i++)
-            cout << "-";
-        cout << endl;
+      for (int j = 0; j < vertices; j++)
+        cout << setw(5) << distances[i][j] << " ";
+      cout << endl;
     }
-    int getDelayTo(int toNode)
+
+    // display router configurations
+    for (int i = 0; i < vertices; i++)
     {
-        return this->delayTable[toNode];
+      cout << "\nRouting Table for Router " << (i + 1) << ":";
+      cout << "\nDest Router \t Via \t\t Distance";
+      cout << "\n=========== \t ======== \t ========\n";
+      for (int j = 0; j < vertices; j++)
+      {
+        if (i == j)
+          continue;
+        cout << (j + 1)
+             << " \t\t ";
+        if (nextHop[i][j] == -1)
+          cout << "-";
+        else
+          cout << (nextHop[i][j] + 1);
+        cout << " \t\t "
+             << distances[i][j] << endl;
+      }
     }
-    int getNodeId()
-    {
-        return this->nodeId;
-    }
+  }
 };
 
-int main(int argc, char const *argv[])
+int main()
 {
-    int totalNodes, numOfNeighbours;
-    int distance;
-    node **neighbours;
-    char nodeId;
-    cout << "Total nodes: ";
-    cin >> totalNodes;
-    cout << "Current node id: ";
-    cin >> nodeId;
-    node primaryNode(nodeId, totalNodes);
-    cout << "Num of Neighbours: ";
-    cin >> numOfNeighbours;
-    neighbours = new node *[numOfNeighbours];
-    for (int i = 0; i < numOfNeighbours; i++)
-    {
-        system(CLRSCR);
-        cout << "Id of neighbour " << i + 1 << " : ";
-        cin >> nodeId;
-        cout << "Distance from " << char('A' + primaryNode.getNodeId()) << " : ";
-        cin >> distance;
-        neighbours[i] = new node(nodeId, totalNodes);
-        neighbours[i]->inputDelayTable();
-        primaryNode.addNeighbour(neighbours[i], distance);
-    }
-    primaryNode.calculateRoutingTable();
-    system(CLRSCR);
-    primaryNode.displayRoutingTable();
-    cout << "Press enter to continue...";
-    cin.ignore();
-    cin.get();
-    for (int i = 0; i < numOfNeighbours; i++)
-        delete neighbours[i];
-    delete[] neighbours;
+  int v, e;
+  int link1, link2;
+  Graph graph;
+
+  cout << "Enter No. of Nodes: ";
+  cin >> v;
+  cout << "Enter No. of Edges: ";
+  cin >> e;
+
+  graph.input(v, e);
+
+  cout << "\nGRAPH\n=====\n";
+  graph.display();
+  cout << endl;
+
+  graph.distanceVector();
+
+  cout << "\nSimulating Link Failure\n";
+  cout << "=======================\n";
+  cout << "Enter Routers to Break Link Between: ";
+  cin >> link1 >> link2;
+  cout << endl;
+
+  graph.adjMatrix[link1 - 1][link2 - 1] =
+      graph.adjMatrix[link2 - 1][link1 - 1] = 0;
+
+  graph.distanceVector();
+
+  return 0;
 }
