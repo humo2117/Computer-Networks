@@ -1,159 +1,146 @@
-#include <iostream>
+#include <bits/stdc++.h>
+#define MAX_NODES 10
 
 using namespace std;
 
-#define INF 9999
-#define VISITED 1
-#define NOT_VISITED 0
-
-class Router
+class Graph
 {
-    int **graph;
-    int *dist;
-    int *set;
-    int *parent;
-    int numOfNodes;
-    void dijkstra(int src);
-    int emptySet();
-    int lowestDistInSet();
-    void printPath(int dst);
+public:
+  int edges;
+  int vertices;
+  int path[MAX_NODES];
+  int distances[MAX_NODES];
+  int adjMatrix[MAX_NODES][MAX_NODES];
 
-  public:
-    Router();
-    ~Router();
-    void getRoute(int src, int dst);
+  void input(int v, int e)
+  {
+    edges = e;
+    vertices = v;
+
+    // initialize the adjacency matrix
+    for (int i = 0; i < v; i++)
+      for (int j = 0; j < v; j++)
+        adjMatrix[i][j] = 0;
+
+    int src, dest, weight;
+
+    // populate the adjacency matrix
+    for (int i = 0; i < edges; i++)
+    {
+      cout << "\nEDGE " << (i + 1)
+           << "\n======\n";
+      cout << "Enter Source: ";
+      cin >> src;
+      cout << "Enter Destination: ";
+      cin >> dest;
+      cout << "Enter Weight: ";
+      cin >> weight;
+      adjMatrix[src - 1][dest - 1] = weight;
+      adjMatrix[dest - 1][src - 1] = weight;
+    }
+  }
+
+  void display()
+  {
+    for (int i = 0; i < vertices; i++)
+    {
+      for (int j = 0; j < vertices; j++)
+        cout << setw(5) << adjMatrix[i][j] << " ";
+      cout << endl;
+    }
+  }
+
+  void dijkstra(int src)
+  {
+    bool visited[MAX_NODES];
+
+    for (int i = 0; i < vertices; i++)
+    {
+      visited[i] = false;     // mark node as not processed
+      distances[i] = INT_MAX; // set distance from src as infinity
+    }
+
+    // mark the src node
+    path[src] = -1;
+    distances[src] = 0;
+
+    // iterate over all vertices
+    for (int i = 0; i < vertices - 1; i++)
+    {
+      // find the nearest unprocessed node
+      int u = minDistance(visited);
+      // mark node as processed
+      visited[u] = true;
+      // iterate over all nodes
+      for (int v = 0; v < vertices; v++)
+        // update distance for unprocessed node if there
+        // exists an edge(u,v) and new distance is lesser
+        // also add the node to the shortest path
+        if (visited[v] == false &&
+            adjMatrix[u][v] &&
+            distances[u] != INT_MAX &&
+            distances[u] + adjMatrix[u][v] < distances[v])
+        {
+          path[v] = u;
+          distances[v] = distances[u] + adjMatrix[u][v];
+        }
+    }
+
+    // print distances and shortest paths
+    cout << "\nDest Node \t Distance \t Shortest Path";
+    cout << "\n========= \t ======== \t =============";
+    for (int i = 0; i < vertices; i++)
+    {
+      cout << endl
+           << (i + 1)
+           << " \t\t " << distances[i]
+           << " \t\t " << (src + 1);
+      printShortestPath(i);
+    }
+  }
+
+  int minDistance(bool *visited)
+  {
+    int min = INT_MAX, min_index;
+    for (int v = 0; v < vertices; v++)
+      if (visited[v] == false &&
+          distances[v] <= min)
+      {
+        min = distances[v];
+        min_index = v;
+      }
+    return min_index;
+  }
+
+  void printShortestPath(int node)
+  {
+    if (path[node] == -1)
+      return;
+    printShortestPath(path[node]);
+    cout << " -> " << (node + 1);
+  }
 };
 
 int main()
 {
-    Router router;
-    int choice;
-    while (1)
-    {
-        cout << "DIJKSTRA ROUTE FINDER" << endl;
-        cout << "1) Enter src and destination to get path" << endl;
-        cout << "Enter 0 to exit..." << endl;
-        cout << "Enter your choice: ";
-        cin >> choice;
-        switch (choice)
-        {
-        case 0:
-            exit(1);
-        case 1:
-            int from,to;
-            cout<<"Enter source: ";
-            cin>>from;
-            cout<<"Enter destination: ";
-            cin>>to;
-            router.getRoute(from,to);
-            break;
-        default:
-            cout<<"ERROR: wrong choice please try again..."<<endl;
-        }
-        cout<<"Press enter to continue...";
-        cin.ignore();
-        cin.get();
-    }
-}
+  int v, e;
+  Graph graph;
 
-Router::Router()
-{
-    cout << "Enter number of nodes: ";
-    cin >> numOfNodes;
-    graph = new int *[numOfNodes];
-    cout << "Enter weighted graph" << endl;
-    for (int i = 0; i < numOfNodes; i++)
-    {
-        graph[i] = new int[numOfNodes];
-        cout << "Enter row number " << i + 1 << " : ";
-        for (int j = 0; j < numOfNodes; j++)
-            cin >> graph[i][j];
-    }
-    dist = new int[numOfNodes];
-    set = new int[numOfNodes];
-    parent = new int[numOfNodes];
-}
+  cout << "Enter No. of Nodes: ";
+  cin >> v;
+  cout << "Enter No. of Edges: ";
+  cin >> e;
 
-Router::~Router()
-{
-    for (int i = 0; i < numOfNodes; i++)
-    {
-        delete[] graph[i];
-    }
-    delete[] graph;
-    delete[] set;
-    delete[] dist;
-}
+  graph.input(v, e);
 
-void Router::dijkstra(int src)
-{
-    int current;
-    for (int i = 0; i < numOfNodes; i++)
-    {
-        dist[i] = INF;
-        set[i] = NOT_VISITED;
-    }
-    dist[src] = 0;
-    parent[src] = -1;
-    while (!emptySet())
-    {
-        current = lowestDistInSet();
-        set[current] = VISITED;
-        for (int i = 0; i < numOfNodes; i++)
-        {
-            if (set[i] != VISITED && graph[current][i] >= 0)
-            {
-                if (dist[i] > dist[current] + graph[current][i])
-                {
-                    dist[i] = dist[current] + graph[current][i];
-                    parent[i] = current;
-                }
-            }
-        }
-    }
-}
+  cout << "\nGRAPH\n=====\n";
+  graph.display();
+  cout << endl;
 
-void Router::getRoute(int src, int dst)
-{
-    dijkstra(src);
-    cout << "Dist from " << src << " to " << dst << " is " << dist[dst] << endl;
-    cout << "Path: ";
-    printPath(dst);
-    cout << endl;
-}
+  cout << "Enter Source Node: ";
+  cin >> v;
 
-int Router::emptySet()
-{
-    for (int i = 0; i < numOfNodes; i++)
-    {
-        if (set[i] == NOT_VISITED)
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
+  graph.dijkstra(v - 1);
 
-int Router::lowestDistInSet()
-{
-    int current = INF, currentIndex = 0;
-    for (int i = 0; i < numOfNodes; i++)
-    {
-        if (set[i] == NOT_VISITED && dist[i] < current)
-        {
-            current = dist[i];
-            currentIndex = i;
-        }
-    }
-    return currentIndex;
-}
-
-void Router::printPath(int dst)
-{
-    if (parent[dst] == -1)
-    {
-        return;
-    }
-    printPath(parent[dst]);
-    cout << parent[dst] << " ";
+  return 0;
 }
